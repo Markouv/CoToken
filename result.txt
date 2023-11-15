@@ -1,0 +1,506 @@
+> initializing model parallel with size 1
+> initializing ddp with size 1
+> initializing pipeline with size 1
+0 1
+Loading
+Loaded in 10.35 seconds
+{'epoch': 1, 'step': 1000}
+tp: 329, pred: 701, true: 502
+tp: 313, pred: 907, true: 498
+tp: 642, pred: 1608, true: 1000
+{'precision': 0.39925373134080067, 'recall': 0.64199999999358, 'f1': 0.4923312883416705}
+'loss': 2.5136878490448
+train error:The expanded size of the tensor (2048) must match the existing size (3203) at non-singleton dimension 1.  Target sizes: [1, 2048, 32, 128].  Tensor sizes: [3203, 32, 128]
+{'epoch': 1, 'step': 2000}
+tp: 366, pred: 825, true: 513
+tp: 335, pred: 999, true: 486
+tp: 701, pred: 1824, true: 999
+{'precision': 0.3843201754364895, 'recall': 0.7017017016946776, 'f1': 0.49663478568722413}
+'loss': 3.1504926681518555
+{'epoch': 1, 'step': 3000}
+tp: 350, pred: 929, true: 500
+tp: 343, pred: 1152, true: 500
+tp: 693, pred: 2081, true: 1000
+{'precision': 0.333012974529875, 'recall': 0.69299999999307, 'f1': 0.44985394352336955}
+'loss': 2.94386625289917
+{'epoch': 1, 'step': 4000}
+tp: 369, pred: 864, true: 507
+tp: 340, pred: 1147, true: 493
+tp: 709, pred: 2011, true: 1000
+{'precision': 0.3525609149659246, 'recall': 0.70899999999291, 'f1': 0.47093988707914003}
+'loss': 2.3419060707092285
+{'epoch': 1, 'step': 5000}
+tp: 381, pred: 910, true: 519
+tp: 332, pred: 1059, true: 481
+tp: 713, pred: 1969, true: 1000
+{'precision': 0.3621127475857689, 'recall': 0.71299999999287, 'f1': 0.4802963960913429}
+'loss': 2.6127665042877197
+{'epoch': 1, 'step': 6000}
+tp: 354, pred: 839, true: 491
+tp: 366, pred: 1384, true: 509
+tp: 720, pred: 2223, true: 1000
+{'precision': 0.3238866396746564, 'recall': 0.7199999999928, 'f1': 0.4467887061729855}
+'loss': 3.686373472213745
+{'epoch': 1, 'step': 7000}
+tp: 379, pred: 896, true: 524
+tp: 322, pred: 1045, true: 476
+tp: 701, pred: 1941, true: 1000
+{'precision': 0.3611540443051976, 'recall': 0.70099999999299, 'f1': 0.47670860251453007}
+'loss': 2.678252935409546
+{'epoch': 1, 'step': 8000}
+tp: 377, pred: 885, true: 520
+tp: 356, pred: 981, true: 480
+tp: 733, pred: 1866, true: 1000
+{'precision': 0.39281886387785203, 'recall': 0.73299999999267, 'f1': 0.5115143056506926}
+'loss': 3.395693302154541
+{'test-precision': 0.3481059668226093, 'test-recall': 0.702999999996485, 'test-f1': 0.46564000662284216}
+{'epoch': 2, 'step': 1000}
+tp: 418, pred: 899, true: 534
+tp: 358, pred: 1015, true: 466
+tp: 776, pred: 1914, true: 1000
+{'precision': 0.40543364681083893, 'recall': 0.77599999999224, 'f1': 0.5326012354134091}
+'loss': 2.646998405456543
+{'epoch': 2, 'step': 2000}
+tp: 413, pred: 966, true: 529
+tp: 347, pred: 1095, true: 471
+tp: 760, pred: 2061, true: 1000
+{'precision': 0.3687530325067018, 'recall': 0.7599999999924, 'f1': 0.4965697484465973}
+'loss': 2.800269603729248
+train error:The expanded size of the tensor (2048) must match the existing size (3203) at non-singleton dimension 1.  Target sizes: [1, 2048, 32, 128].  Tensor sizes: [3203, 32, 128]
+{'epoch': 2, 'step': 3000}
+tp: 413, pred: 876, true: 527
+tp: 340, pred: 1228, true: 472
+tp: 753, pred: 2104, true: 999
+{'precision': 0.35788973383860323, 'recall': 0.7537537537462087, 'f1': 0.48533677086533894}
+'loss': 2.934171676635742
+{'epoch': 2, 'step': 4000}
+tp: 333, pred: 834, true: 456
+tp: 401, pred: 1315, true: 544
+tp: 734, pred: 2149, true: 1000
+{'precision': 0.3415542112594623, 'recall': 0.73399999999266, 'f1': 0.4661797395983926}
+'loss': 2.847956418991089
+{'epoch': 2, 'step': 5000}
+tp: 426, pred: 955, true: 544
+tp: 327, pred: 972, true: 456
+tp: 753, pred: 1927, true: 1000
+{'precision': 0.39076284379662296, 'recall': 0.75299999999247, 'f1': 0.5145199863323727}
+'loss': 2.629486083984375
+{'epoch': 2, 'step': 6000}
+tp: 370, pred: 971, true: 496
+tp: 370, pred: 1121, true: 504
+tp: 740, pred: 2092, true: 1000
+{'precision': 0.35372848948205676, 'recall': 0.7399999999926, 'f1': 0.4786545924952178}
+'loss': 4.578389644622803
+{'epoch': 2, 'step': 7000}
+tp: 376, pred: 854, true: 489
+tp: 382, pred: 1180, true: 511
+tp: 758, pred: 2034, true: 1000
+{'precision': 0.37266470009649627, 'recall': 0.75799999999242, 'f1': 0.49967040210777963}
+'loss': 2.9496965408325195
+{'epoch': 2, 'step': 8000}
+tp: 366, pred: 965, true: 501
+tp: 366, pred: 1273, true: 499
+tp: 732, pred: 2238, true: 1000
+{'precision': 0.3270777479878147, 'recall': 0.73199999999268, 'f1': 0.4521309450263986}
+'loss': 2.56897234916687
+{'test-precision': 0.45231607629290854, 'test-recall': 0.746999999996265, 'test-f1': 0.5634546483112136}
+{'epoch': 3, 'step': 1000}
+tp: 407, pred: 915, true: 514
+tp: 394, pred: 1087, true: 486
+tp: 801, pred: 2002, true: 1000
+{'precision': 0.40009990009790164, 'recall': 0.80099999999199, 'f1': 0.5336442371734389}
+'loss': 2.136713743209839
+{'epoch': 3, 'step': 2000}
+tp: 387, pred: 1068, true: 507
+tp: 384, pred: 1191, true: 493
+tp: 771, pred: 2259, true: 1000
+{'precision': 0.34130146082186236, 'recall': 0.77099999999229, 'f1': 0.47315127339529567}
+'loss': 2.098841428756714
+train error:The expanded size of the tensor (2048) must match the existing size (3203) at non-singleton dimension 1.  Target sizes: [1, 2048, 32, 128].  Tensor sizes: [3203, 32, 128]
+{'epoch': 3, 'step': 3000}
+tp: 384, pred: 932, true: 504
+tp: 362, pred: 1122, true: 495
+tp: 746, pred: 2054, true: 999
+{'precision': 0.3631937682552912, 'recall': 0.7467467467392718, 'f1': 0.4886996396970564}
+'loss': 4.5361809730529785
+{'epoch': 3, 'step': 4000}
+tp: 374, pred: 960, true: 492
+tp: 382, pred: 1238, true: 508
+tp: 756, pred: 2198, true: 1000
+{'precision': 0.34394904458442244, 'recall': 0.7559999999924399, 'f1': 0.47279549718426267}
+'loss': 3.0362000465393066
+{'epoch': 3, 'step': 5000}
+tp: 418, pred: 920, true: 539
+tp: 352, pred: 1027, true: 461
+tp: 770, pred: 1947, true: 1000
+{'precision': 0.3954802259866694, 'recall': 0.7699999999923, 'f1': 0.52256532066331}
+'loss': 4.818385124206543
+{'epoch': 3, 'step': 6000}
+tp: 392, pred: 836, true: 502
+tp: 364, pred: 1185, true: 498
+tp: 756, pred: 2021, true: 1000
+{'precision': 0.37407224146277057, 'recall': 0.7559999999924399, 'f1': 0.5004965243280355}
+'loss': 2.782505989074707
+{'epoch': 3, 'step': 7000}
+tp: 393, pred: 1016, true: 518
+tp: 362, pred: 1031, true: 482
+tp: 755, pred: 2047, true: 1000
+{'precision': 0.3688324377119256, 'recall': 0.75499999999245, 'f1': 0.4955694125352952}
+'loss': 3.9460866451263428
+{'epoch': 3, 'step': 8000}
+tp: 387, pred: 978, true: 500
+tp: 376, pred: 1039, true: 500
+tp: 763, pred: 2017, true: 1000
+{'precision': 0.3782845810591062, 'recall': 0.76299999999237, 'f1': 0.5058004640354465}
+'loss': 2.6703152656555176
+{'test-precision': 0.49593495934791354, 'test-recall': 0.73199999999634, 'test-f1': 0.5912762520181921}
+{'epoch': 4, 'step': 1000}
+tp: 410, pred: 917, true: 518
+tp: 390, pred: 997, true: 482
+tp: 800, pred: 1914, true: 1000
+{'precision': 0.4179728317637515, 'recall': 0.799999999992, 'f1': 0.5490734385705248}
+'loss': 4.504004955291748
+{'epoch': 4, 'step': 2000}
+tp: 393, pred: 1015, true: 501
+tp: 390, pred: 1116, true: 499
+tp: 783, pred: 2131, true: 1000
+{'precision': 0.3674331299841979, 'recall': 0.78299999999217, 'f1': 0.5001596933870963}
+'loss': 2.8479182720184326
+train error:The expanded size of the tensor (2048) must match the existing size (3203) at non-singleton dimension 1.  Target sizes: [1, 2048, 32, 128].  Tensor sizes: [3203, 32, 128]
+{'epoch': 4, 'step': 3000}
+tp: 392, pred: 1120, true: 503
+tp: 378, pred: 1165, true: 496
+tp: 770, pred: 2285, true: 999
+{'precision': 0.3369803063442583, 'recall': 0.7707707707630553, 'f1': 0.46894031668553915}
+'loss': 3.676038980484009
+{'epoch': 4, 'step': 4000}
+tp: 381, pred: 941, true: 490
+tp: 395, pred: 1270, true: 510
+tp: 776, pred: 2211, true: 1000
+{'precision': 0.3509724106723158, 'recall': 0.77599999999224, 'f1': 0.48333852382284853}
+'loss': 4.044921398162842
+{'epoch': 4, 'step': 5000}
+tp: 398, pred: 894, true: 508
+tp: 380, pred: 1374, true: 492
+tp: 778, pred: 2268, true: 1000
+{'precision': 0.34303350969866386, 'recall': 0.77799999999222, 'f1': 0.4761321909410155}
+'loss': 4.102731227874756
+{'epoch': 4, 'step': 6000}
+tp: 416, pred: 997, true: 524
+tp: 352, pred: 1141, true: 476
+tp: 768, pred: 2138, true: 1000
+{'precision': 0.3592142188944845, 'recall': 0.76799999999232, 'f1': 0.4894837476083828}
+'loss': 2.8086726665496826
+{'epoch': 4, 'step': 7000}
+tp: 382, pred: 1049, true: 515
+tp: 370, pred: 1099, true: 485
+tp: 752, pred: 2148, true: 1000
+{'precision': 0.35009310986801634, 'recall': 0.75199999999248, 'f1': 0.47776365946481014}
+'loss': 3.566222906112671
+{'epoch': 4, 'step': 8000}
+tp: 422, pred: 1035, true: 517
+tp: 367, pred: 1176, true: 483
+tp: 789, pred: 2211, true: 1000
+{'precision': 0.3568521031191459, 'recall': 0.78899999999211, 'f1': 0.4914356898147262}
+'loss': 2.542401075363159
+{'test-precision': 0.3087802003529586, 'test-recall': 0.7859999999960701, 'test-f1': 0.4433789310387204}
+{'epoch': 5, 'step': 1000}
+tp: 396, pred: 911, true: 513
+tp: 389, pred: 1151, true: 487
+tp: 785, pred: 2062, true: 1000
+{'precision': 0.3806983511135757, 'recall': 0.78499999999215, 'f1': 0.5127367733490766}
+'loss': 4.135266304016113
+{'epoch': 5, 'step': 2000}
+tp: 403, pred: 1000, true: 509
+tp: 393, pred: 1102, true: 491
+tp: 796, pred: 2102, true: 1000
+{'precision': 0.3786869647936314, 'recall': 0.79599999999204, 'f1': 0.5132172791730716}
+'loss': 3.4363837242126465
+{'epoch': 5, 'step': 3000}
+tp: 399, pred: 1138, true: 502
+tp: 384, pred: 1372, true: 498
+tp: 783, pred: 2510, true: 1000
+{'precision': 0.31195219123381696, 'recall': 0.78299999999217, 'f1': 0.4461538461525751}
+'loss': 2.2003366947174072
+{'epoch': 5, 'step': 4000}
+tp: 389, pred: 975, true: 505
+tp: 387, pred: 1307, true: 495
+tp: 776, pred: 2282, true: 1000
+{'precision': 0.3400525854498683, 'recall': 0.77599999999224, 'f1': 0.47288238878588396}
+'loss': 3.169715404510498
+{'epoch': 5, 'step': 5000}
+tp: 432, pred: 993, true: 535
+tp: 358, pred: 1216, true: 465
+tp: 790, pred: 2209, true: 1000
+{'precision': 0.35762788591961236, 'recall': 0.7899999999921, 'f1': 0.49236522280931017}
+'loss': 2.7957205772399902
+{'epoch': 5, 'step': 6000}
+tp: 399, pred: 880, true: 506
+tp: 375, pred: 1306, true: 494
+tp: 774, pred: 2186, true: 1000
+{'precision': 0.35407136321887434, 'recall': 0.77399999999226, 'f1': 0.4858757062131642}
+'loss': 3.812884569168091
+train error:The expanded size of the tensor (2048) must match the existing size (3203) at non-singleton dimension 1.  Target sizes: [1, 2048, 32, 128].  Tensor sizes: [3203, 32, 128]
+{'epoch': 5, 'step': 7000}
+tp: 410, pred: 842, true: 503
+tp: 383, pred: 1115, true: 496
+tp: 793, pred: 1957, true: 999
+{'precision': 0.40521205927232906, 'recall': 0.7937937937858479, 'f1': 0.5365358592674677}
+'loss': 4.16733455657959
+{'epoch': 5, 'step': 8000}
+tp: 394, pred: 962, true: 503
+tp: 394, pred: 1111, true: 497
+tp: 788, pred: 2073, true: 1000
+{'precision': 0.3801254220917505, 'recall': 0.78799999999212, 'f1': 0.5128538887064339}
+'loss': 2.9133384227752686
+{'test-precision': 0.37741856477987407, 'test-recall': 0.7704999999961475, 'test-f1': 0.5066578990621294}
+{'epoch': 6, 'step': 1000}
+tp: 424, pred: 864, true: 520
+tp: 383, pred: 1121, true: 480
+tp: 807, pred: 1985, true: 1000
+{'precision': 0.4065491183858612, 'recall': 0.80699999999193, 'f1': 0.5407035175861283}
+'loss': 4.8525004386901855
+{'epoch': 6, 'step': 2000}
+tp: 426, pred: 869, true: 540
+tp: 365, pred: 1092, true: 460
+tp: 791, pred: 1961, true: 1000
+{'precision': 0.4033656297786672, 'recall': 0.79099999999209, 'f1': 0.5342789598090704}
+'loss': 2.632199764251709
+{'epoch': 6, 'step': 3000}
+tp: 410, pred: 882, true: 495
+tp: 401, pred: 1197, true: 505
+tp: 811, pred: 2079, true: 1000
+{'precision': 0.39009139008951377, 'recall': 0.81099999999189, 'f1': 0.5267944137689938}
+'loss': 2.7313971519470215
+{'epoch': 6, 'step': 4000}
+tp: 392, pred: 903, true: 499
+tp: 379, pred: 1269, true: 501
+tp: 771, pred: 2172, true: 1000
+{'precision': 0.35497237568897344, 'recall': 0.77099999999229, 'f1': 0.4861286254713552}
+'loss': 1.779297113418579
+{'epoch': 6, 'step': 5000}
+tp: 398, pred: 877, true: 490
+tp: 393, pred: 1442, true: 510
+tp: 791, pred: 2319, true: 1000
+{'precision': 0.3410952996966749, 'recall': 0.79099999999209, 'f1': 0.4766495932495431}
+'loss': 2.1759426593780518
+train error:The expanded size of the tensor (2048) must match the existing size (3203) at non-singleton dimension 1.  Target sizes: [1, 2048, 32, 128].  Tensor sizes: [3203, 32, 128]
+{'epoch': 6, 'step': 6000}
+tp: 394, pred: 984, true: 508
+tp: 381, pred: 1186, true: 491
+tp: 775, pred: 2170, true: 999
+{'precision': 0.35714285714121136, 'recall': 0.7757757757680103, 'f1': 0.48911328494638967}
+'loss': 3.539663314819336
+{'epoch': 6, 'step': 7000}
+tp: 410, pred: 1049, true: 514
+tp: 375, pred: 1275, true: 486
+tp: 785, pred: 2324, true: 1000
+{'precision': 0.3377796901878753, 'recall': 0.78499999999215, 'f1': 0.4723225030070027}
+'loss': 2.339773654937744
+{'epoch': 6, 'step': 8000}
+tp: 397, pred: 992, true: 511
+tp: 375, pred: 1180, true: 489
+tp: 772, pred: 2172, true: 1000
+{'precision': 0.35543278084550906, 'recall': 0.77199999999228, 'f1': 0.4867591424953129}
+'loss': 4.006740093231201
+{'test-precision': 0.45417831624587085, 'test-recall': 0.730999999996345, 'test-f1': 0.5602605863181448}
+{'epoch': 7, 'step': 1000}
+tp: 436, pred: 984, true: 525
+tp: 371, pred: 1234, true: 475
+tp: 807, pred: 2218, true: 1000
+{'precision': 0.3638412984654471, 'recall': 0.80699999999193, 'f1': 0.5015537600978821}
+'loss': 2.703296184539795
+{'epoch': 7, 'step': 2000}
+tp: 399, pred: 891, true: 510
+tp: 397, pred: 1075, true: 490
+tp: 796, pred: 1966, true: 1000
+{'precision': 0.40488301118817455, 'recall': 0.79599999999204, 'f1': 0.536749831420982}
+'loss': 2.744347095489502
+{'epoch': 7, 'step': 3000}
+tp: 410, pred: 1129, true: 513
+tp: 376, pred: 1156, true: 487
+tp: 786, pred: 2285, true: 1000
+{'precision': 0.3439824945280351, 'recall': 0.78599999999214, 'f1': 0.4785388127839314}
+'loss': 3.665677547454834
+{'epoch': 7, 'step': 4000}
+tp: 417, pred: 982, true: 507
+tp: 386, pred: 1097, true: 493
+tp: 803, pred: 2079, true: 1000
+{'precision': 0.38624338624152843, 'recall': 0.80299999999197, 'f1': 0.5215979214013589}
+'loss': 3.29654598236084
+train error:The expanded size of the tensor (2048) must match the existing size (3203) at non-singleton dimension 1.  Target sizes: [1, 2048, 32, 128].  Tensor sizes: [3203, 32, 128]
+{'epoch': 7, 'step': 5000}
+tp: 403, pred: 803, true: 494
+tp: 396, pred: 1322, true: 505
+tp: 799, pred: 2125, true: 999
+{'precision': 0.3759999999982306, 'recall': 0.7997997997917938, 'f1': 0.5115236875783882}
+'loss': 2.2028539180755615
+{'epoch': 7, 'step': 6000}
+tp: 412, pred: 951, true: 502
+tp: 391, pred: 1089, true: 498
+tp: 803, pred: 2040, true: 1000
+{'precision': 0.39362745097846263, 'recall': 0.80299999999197, 'f1': 0.5282894736824727}
+'loss': 4.683589458465576
+{'epoch': 7, 'step': 7000}
+tp: 411, pred: 965, true: 518
+tp: 388, pred: 1192, true: 482
+tp: 799, pred: 2157, true: 1000
+{'precision': 0.3704218822421399, 'recall': 0.79899999999201, 'f1': 0.5061767500775858}
+'loss': 2.760761260986328
+{'epoch': 7, 'step': 8000}
+tp: 393, pred: 938, true: 507
+tp: 380, pred: 1264, true: 493
+tp: 773, pred: 2202, true: 1000
+{'precision': 0.35104450499386447, 'recall': 0.77299999999227, 'f1': 0.4828232354763185}
+'loss': 3.576486825942993
+{'test-precision': 0.33310626702921636, 'test-recall': 0.7334999999963325, 'test-f1': 0.45815115552707975}
+{'epoch': 8, 'step': 1000}
+tp: 398, pred: 932, true: 500
+tp: 403, pred: 1075, true: 500
+tp: 801, pred: 2007, true: 1000
+{'precision': 0.3991031390114644, 'recall': 0.80099999999199, 'f1': 0.5327569005635758}
+'loss': 2.7342610359191895
+{'epoch': 8, 'step': 2000}
+tp: 417, pred: 989, true: 506
+tp: 388, pred: 1249, true: 494
+tp: 805, pred: 2238, true: 1000
+{'precision': 0.3596961572816815, 'recall': 0.80499999999195, 'f1': 0.49722050648394933}
+'loss': 3.104372978210449
+train error:The expanded size of the tensor (2048) must match the existing size (3203) at non-singleton dimension 1.  Target sizes: [1, 2048, 32, 128].  Tensor sizes: [3203, 32, 128]
+{'epoch': 8, 'step': 3000}
+tp: 410, pred: 981, true: 496
+tp: 404, pred: 1293, true: 503
+tp: 814, pred: 2274, true: 999
+{'precision': 0.35795954265453844, 'recall': 0.8148148148066585, 'f1': 0.4974029941934085}
+'loss': 3.0344793796539307
+{'epoch': 8, 'step': 4000}
+tp: 407, pred: 1011, true: 508
+tp: 392, pred: 1216, true: 492
+tp: 799, pred: 2227, true: 1000
+{'precision': 0.35877862595258747, 'recall': 0.79899999999201, 'f1': 0.49519677719090427}
+'loss': 4.1862945556640625
+{'epoch': 8, 'step': 5000}
+tp: 423, pred: 1013, true: 526
+tp: 368, pred: 1234, true: 474
+tp: 791, pred: 2247, true: 1000
+{'precision': 0.3520249221168134, 'recall': 0.79099999999209, 'f1': 0.4872189713566763}
+'loss': 3.0704917907714844
+{'epoch': 8, 'step': 6000}
+tp: 408, pred: 1008, true: 513
+tp: 380, pred: 1351, true: 487
+tp: 788, pred: 2359, true: 1000
+{'precision': 0.33403984739154713, 'recall': 0.78799999999212, 'f1': 0.4691872581111367}
+'loss': 3.1117024421691895
+{'epoch': 8, 'step': 7000}
+tp: 405, pred: 965, true: 500
+tp: 405, pred: 1153, true: 500
+tp: 810, pred: 2118, true: 1000
+{'precision': 0.38243626062142383, 'recall': 0.8099999999919, 'f1': 0.5195638229617718}
+'loss': 2.962545394897461
+{'epoch': 8, 'step': 8000}
+tp: 418, pred: 948, true: 528
+tp: 369, pred: 1224, true: 472
+tp: 787, pred: 2172, true: 1000
+{'precision': 0.36233885819354356, 'recall': 0.78699999999213, 'f1': 0.49621689785467776}
+'loss': 3.9810402393341064
+{'test-precision': 0.2733492986652868, 'test-recall': 0.798999999996005, 'test-f1': 0.40734132041752824}
+{'epoch': 9, 'step': 1000}
+tp: 436, pred: 1062, true: 525
+tp: 379, pred: 1255, true: 475
+tp: 815, pred: 2317, true: 1000
+{'precision': 0.35174794993374303, 'recall': 0.81499999999185, 'f1': 0.4914078987021664}
+'loss': 2.8491594791412354
+{'epoch': 9, 'step': 2000}
+tp: 413, pred: 997, true: 512
+tp: 403, pred: 1381, true: 488
+tp: 816, pred: 2378, true: 1000
+{'precision': 0.3431455004190785, 'recall': 0.81599999999184, 'f1': 0.48312611012290374}
+'loss': 2.652188301086426
+{'epoch': 9, 'step': 3000}
+tp: 397, pred: 980, true: 485
+tp: 422, pred: 1306, true: 515
+tp: 819, pred: 2286, true: 1000
+{'precision': 0.35826771653386585, 'recall': 0.81899999999181, 'f1': 0.4984783931816845}
+'loss': 3.521101951599121
+{'epoch': 9, 'step': 4000}
+tp: 381, pred: 1037, true: 481
+tp: 419, pred: 1257, true: 519
+tp: 800, pred: 2294, true: 1000
+{'precision': 0.3487358326052802, 'recall': 0.799999999992, 'f1': 0.4857316332711423}
+'loss': 3.8565187454223633
+{'epoch': 9, 'step': 5000}
+tp: 402, pred: 1130, true: 518
+tp: 380, pred: 1139, true: 482
+tp: 782, pred: 2269, true: 1000
+{'precision': 0.34464521815625987, 'recall': 0.78199999999218, 'f1': 0.4784337717941926}
+'loss': 3.1253981590270996
+{'epoch': 9, 'step': 6000}
+tp: 435, pred: 1105, true: 541
+tp: 362, pred: 1153, true: 459
+tp: 797, pred: 2258, true: 1000
+{'precision': 0.3529672276335121, 'recall': 0.79699999999203, 'f1': 0.4892572130126174}
+'loss': 3.449174165725708
+train error:The expanded size of the tensor (2048) must match the existing size (3203) at non-singleton dimension 1.  Target sizes: [1, 2048, 32, 128].  Tensor sizes: [3203, 32, 128]
+{'epoch': 9, 'step': 7000}
+tp: 394, pred: 947, true: 496
+tp: 400, pred: 1180, true: 503
+tp: 794, pred: 2127, true: 999
+{'precision': 0.37329572167196384, 'recall': 0.7947947947868389, 'f1': 0.5079974408173129}
+'loss': 2.626065254211426
+{'epoch': 9, 'step': 8000}
+tp: 434, pred: 895, true: 518
+tp: 368, pred: 1283, true: 482
+tp: 802, pred: 2178, true: 1000
+{'precision': 0.3682277318624049, 'recall': 0.80199999999198, 'f1': 0.5047199496522822}
+'loss': 3.1450321674346924
+{'test-precision': 0.3270577933442928, 'test-recall': 0.746999999996265, 'test-f1': 0.45493300852549495}
+{'epoch': 10, 'step': 1000}
+tp: 433, pred: 933, true: 523
+tp: 398, pred: 1148, true: 477
+tp: 831, pred: 2081, true: 1000
+{'precision': 0.3993272465141791, 'recall': 0.8309999999916899, 'f1': 0.5394352482942569}
+'loss': 2.555234909057617
+{'epoch': 10, 'step': 2000}
+tp: 428, pred: 1024, true: 508
+tp: 409, pred: 1209, true: 492
+tp: 837, pred: 2233, true: 1000
+{'precision': 0.37483206448555834, 'recall': 0.83699999999163, 'f1': 0.5177853386931093}
+'loss': 5.1708083152771
+{'epoch': 10, 'step': 3000}
+tp: 365, pred: 991, true: 464
+tp: 421, pred: 1416, true: 536
+tp: 786, pred: 2407, true: 1000
+{'precision': 0.326547569587343, 'recall': 0.78599999999214, 'f1': 0.46140299383486527}
+'loss': 2.508694648742676
+train error:The expanded size of the tensor (2048) must match the existing size (3203) at non-singleton dimension 1.  Target sizes: [1, 2048, 32, 128].  Tensor sizes: [3203, 32, 128]
+{'epoch': 10, 'step': 4000}
+tp: 419, pred: 967, true: 509
+tp: 394, pred: 1399, true: 490
+tp: 813, pred: 2366, true: 999
+{'precision': 0.34361792053954515, 'recall': 0.8138138138056675, 'f1': 0.4832095096568107}
+'loss': 3.6030771732330322
+{'epoch': 10, 'step': 5000}
+tp: 408, pred: 982, true: 506
+tp: 391, pred: 1292, true: 494
+tp: 799, pred: 2274, true: 1000
+{'precision': 0.35136323658596585, 'recall': 0.79899999999201, 'f1': 0.48808796578959046}
+'loss': 3.9180307388305664
+{'epoch': 10, 'step': 6000}
+tp: 434, pred: 958, true: 525
+tp: 362, pred: 1237, true: 475
+tp: 796, pred: 2195, true: 1000
+{'precision': 0.36264236901884905, 'recall': 0.79599999999204, 'f1': 0.4982785602488317}
+'loss': 2.4686295986175537
+{'epoch': 10, 'step': 7000}
+tp: 426, pred: 919, true: 533
+tp: 372, pred: 1252, true: 467
+tp: 798, pred: 2171, true: 1000
+{'precision': 0.3675725472115727, 'recall': 0.79799999999202, 'f1': 0.5033112582765584}
+'loss': 2.2598979473114014
+{'epoch': 10, 'step': 8000}
+tp: 414, pred: 956, true: 509
+tp: 390, pred: 1300, true: 491
+tp: 804, pred: 2256, true: 1000
+{'precision': 0.35638297872182456, 'recall': 0.80399999999196, 'f1': 0.4938574938559771}
+'loss': 2.3934435844421387
+{'test-precision': 0.3702499999990744, 'test-recall': 0.7404999999962976, 'test-f1': 0.4936666666658439}
