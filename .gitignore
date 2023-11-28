@@ -7,7 +7,7 @@ plan.md
 wandb/
 /virtualhome/src/virtualhome/dataset/
 *.jsonl
-*.sh
+# *.sh
 transform.ipynb
 grade-school-math
 peft
