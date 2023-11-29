@@ -93,7 +93,7 @@ def main(ckpt_dir: str, tokenizer_path: str, input_file: str = None, lr: float =
             prompts = f.readlines()
         prompts = [prompt.strip().replace("\\n", "\n") for prompt in prompts if len(prompt) > 1]
 
-    test_len = 20000
+    test_len = 200
     # if dataset == "gsm8k-xl":
     #     # the last 1000 prompts are the testset
     #     test_len = 1000
@@ -107,7 +107,7 @@ def main(ckpt_dir: str, tokenizer_path: str, input_file: str = None, lr: float =
     
     random.shuffle(prompts)
     testset = prompts[-test_len:]
-    trainset = prompts[:-test_len]
+    trainset = prompts[:50000]
 
     # only update tokens with gradients required
 
@@ -134,8 +134,8 @@ def main(ckpt_dir: str, tokenizer_path: str, input_file: str = None, lr: float =
 
                 for i, r in result.items():
                     results[i].append(r)
-                
-                if (case_idx + 1) % 1000 == 0:
+
+                if (case_idx + 1) % 100 == 0:
                     print({"epoch": epoch + 1, "step": case_idx + 1})
                     for i in range(len(func_list)+1):
                         if i != len(func_list):
@@ -177,9 +177,9 @@ def main(ckpt_dir: str, tokenizer_path: str, input_file: str = None, lr: float =
                 print(f"train error:{e}")
             
             
-            if (case_idx + 1) % 10000 == 0:
+            if (case_idx + 1) % 500 == 0:
                 # save the parameters of func_embed every epoch
-                save_dir = f"checkpoints_1115/{log_prefix}-epoch_{epoch+1}/"
+                save_dir = f"checkpoints_1125/{log_prefix}-epoch_{epoch+1}/"
                 os.makedirs(save_dir, exist_ok=True)
                 torch.save(funcmodel.func_embed.state_dict(), f"{save_dir}/checkpoint{case_idx+1}.pth")
                 results = defaultdict(list)

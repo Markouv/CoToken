@@ -277,6 +277,7 @@ class FunctionLM(nn.Module):
         self.logits_bias = logits_bias
 
     def get_loss(self, raw_inputs, only_functoken=False):
+
         assert len(raw_inputs) == 1
         raw_inputs = raw_inputs[0]
 
@@ -301,13 +302,12 @@ class FunctionLM(nn.Module):
                     op = re.search(r"(\[.*?\])", eq).group(1)
                 elif "<" in eq:
                     op = re.search(r"(<.*?>)", eq).group(1)
-                    # print(op)
 
                 if op not in self.func_dict:
                     op = op[1:-1]
                 
                 labels[s] = self.func_dict[op] + 32000
-                labels[s+1: t] = -100
+                labels[s+1: t-1] = -100
             
             # labels = labels[1:]
             if only_functoken:
@@ -332,6 +332,7 @@ class FunctionLM(nn.Module):
 
         label_funcs = [labels == self.func_dict[op] + 32000 for op in self.func_dict.keys()]
         pred_funcs = [pred == self.func_dict[op] + 32000 for op in self.func_dict.keys()]
+
         label_funcs = torch.stack(label_funcs, dim=0)
         pred_funcs = torch.stack(pred_funcs, dim=0)
         
@@ -343,7 +344,6 @@ class FunctionLM(nn.Module):
             "pred": pred_funcs,
             "true": true
         }
-
 
         return loss, results
     
