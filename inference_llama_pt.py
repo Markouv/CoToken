@@ -16,11 +16,14 @@ from fairscale.nn.model_parallel.initialize import initialize_model_parallel
 from tqdm import tqdm
 from llama import ModelArgs, Transformer, Tokenizer, FunctionLM
 import datasets
-from inference_modes import func_embedding_inference, kamel_embedding_inference, vh_embedding_inference
+from inference_modes import classification_inference
 from funchub.math import *
+from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM
 
 
-SUBJECTS = [
+MAX_GEN_LEN = 512
+
+MMLU_SUBJECTS = [
     "abstract_algebra",
     "anatomy",
     "astronomy",
@@ -79,7 +82,13 @@ SUBJECTS = [
     "virology",
     "world_religions",
 ]
-SID = int(sys.argv[1])
+
+CMMLU_SUBJECTS = ['agronomy', 'anatomy', 'ancient_chinese', 'arts', 'astronomy', 'business_ethics', 'chinese_civil_service_exam', 'chinese_driving_rule', 'chinese_food_culture', 'chinese_foreign_policy', 'chinese_history', 'chinese_literature', 
+'chinese_teacher_qualification', 'clinical_knowledge', 'college_actuarial_science', 'college_education', 'college_engineering_hydrology', 'college_law', 'college_mathematics', 'college_medical_statistics', 'college_medicine', 'computer_science',
+'computer_security', 'conceptual_physics', 'construction_project_management', 'economics', 'education', 'electrical_engineering', 'elementary_chinese', 'elementary_commonsense', 'elementary_information_and_technology', 'elementary_mathematics', 
+'ethnology', 'food_science', 'genetics', 'global_facts', 'high_school_biology', 'high_school_chemistry', 'high_school_geography', 'high_school_mathematics', 'high_school_physics', 'high_school_politics', 'human_sexuality',
+'international_law', 'journalism', 'jurisprudence', 'legal_and_moral_basis', 'logical', 'machine_learning', 'management', 'marketing', 'marxist_theory', 'modern_chinese', 'nutrition', 'philosophy', 'professional_accounting', 'professional_law', 
+'professional_medicine', 'professional_psychology', 'public_relations', 'security_study', 'sociology', 'sports_science', 'traditional_chinese_medicine', 'virology', 'world_history', 'world_religions']
 
 def setup_model_parallel() -> Tuple[int, int]:
     local_rank = int(os.environ.get("LOCAL_RANK", -1))
@@ -114,7 +123,40 @@ def load(ckpt_dir: str, tokenizer_path: str, local_rank: int, world_size: int, f
     return funcmodel
 
 
-def main(ckpt_dir: str, tokenizer_path: str, temperature: float = 0, top_p: float = 0.95, mode: str = "baseline", dataset = "original", return_top: int = 5, logits_bias: float = 0, func_load_path: str = "None", st_idx=0, ed_idx=10000, suffix=""):
+def load_cot_models(cot_dict, local_rank, cuda_st_idx = 1, temperature=0, top_p=0.95, max_gen_len=MAX_GEN_LEN, ):
+    cot_models = {}
+    for cot_name, cot_info in cot_dict.items():
+        torch.cuda.set_device(cuda_st_idx)
+        if cot_info["type"] == "baseline":
+            cot_models[cot_name] = cot_info["path"]
+        elif cot_info["type"] == "chatglm2":
+            tokenizer_chatglm2 = AutoTokenizer.from_pretrained(cot_info["path"], trust_remote_code=True)
+            model_chatglm2 = AutoModel.from_pretrained(cot_info["path"], trust_remote_code=True).bfloat16().cuda()
+            model_chatglm2 = model_chatglm2.eval()
+            model_cuda_idx = cuda_st_idx
+            def generate_chatglm2(prompts):
+                print(model_cuda_idx)
+                torch.cuda.set_device(model_cuda_idx)
+                inputs = tokenizer_chatglm2(prompts, return_tensors="pt", padding=True, truncation=True, max_length=max_gen_len).to("cuda")
+                outputs = model_chatglm2.generate(**inputs, max_new_tokens=max_gen_len, do_sample=False if temperature == 0 else True, top_p=top_p, temperature=temperature)
+                gens = []
+                for idx in range(len(outputs)):
+                    output = outputs.tolist()[idx]
+                    response = tokenizer_chatglm2.decode(output)
+                    gens.append(response)
+                torch.cuda.set_device(local_rank)
+                return gens
+
+            cot_models[cot_name] = generate_chatglm2
+        else:
+            raise NotImplementedError()
+        if cot_info["path"] != "baseline":
+            cuda_st_idx += 1
+    torch.cuda.set_device(local_rank)
+    return cot_models
+
+
+def main(ckpt_dir: str, tokenizer_path: str, temperature: float = 0, top_p: float = 0.95, mode: str = "baseline", dataset = "original", return_top: int = 5, logits_bias: float = 0, func_load_path: str = "None", st_idx=0, ed_idx=10000, suffix="", subset_id: int=0):
     # set random seed
     torch.manual_seed(1)
     torch.cuda.manual_seed_all(1)
@@ -128,18 +170,34 @@ def main(ckpt_dir: str, tokenizer_path: str, temperature: float = 0, top_p: floa
         sys.stdout = open(os.devnull, 'w')
 
     templates = {
-        "general": """Question: [QUESTION]
+        "general": """Question: [QUESTION]\n
 Answer: """,
-        "func": """Question: [QUESTION]
+        "summary": """Question: [QUESTION]\n
+Thoughts: [THOUGHTS]\n
 Answer: """,
+        "<en-CoT>": """Question: [QUESTION]\n Please think step by step and give the answer.\n
+Answer: """, 
+        "<zh-CoT>": """[Round 1]\n\n问：[QUESTION]\n请一步步思考并给出答案。\n\n答："""
     }
 
     test_cases = []
-    ds = datasets.load_dataset("cais/mmlu", SUBJECTS[SID], split="test")
-    texts, options = ds["question"], ds["choices"]
-    test_cases = ["{}\nA. {}\nB. {}\nC. {}\nD. {}".format(text, *option) for text, option in zip(texts, options)]
+    if dataset == "mmlu":
+        ds = datasets.load_dataset("cais/mmlu", MMLU_SUBJECTS[subset_id], split="test")
+        texts, options = ds["question"], ds["choices"]
+        test_cases = ["{}\nA. {}\nB. {}\nC. {}\nD. {}".format(text, *option) for text, option in zip(texts, options)]
+        answers = ds["answer"]
+    elif dataset == "cmmlu":
+        ds = datasets.load_dataset("haonan-li/cmmlu", CMMLU_SUBJECTS[subset_id], split="test")
+        texts, options = ds["Question"], zip(ds["A"], ds["B"], ds["C"], ds["D"])
+        test_cases = ["以下是关于{}的单项选择题，请直接给出正确答案的选项。\n\n{}\nA. {}\nB. {}\nC. {}\nD. {}".format(CMMLU_SUBJECTS[subset_id], text, *option) for text, option in zip(texts, options)]
+        answers = ds["Answer"]
+    else:
+        raise NotImplementedError(f"Dataset {dataset} not implemented")
 
-    max_gen_len = 512
+    ## for debugging
+    # test_cases = test_cases[:1]
+
+    max_gen_len = MAX_GEN_LEN
     func_dict = json.load(open("data/CoToken/CoT_dict.json"))
 
 
@@ -147,12 +205,24 @@ Answer: """,
     funcmodel.set_bias(logits_bias)
     funcmodel.eval()
 
+    cot_dict = {
+        "<en-CoT>": {"path": "baseline", "type": "baseline"},
+        "<zh-CoT>": {"path": '/139-4t/share/evaluation/models/hf-chatglm2-6b', "type": "chatglm2"}
+    }
+    if local_rank == 0:
+        cot_models = load_cot_models(cot_dict, local_rank, world_size, temperature=temperature, top_p=top_p, max_gen_len=max_gen_len)
+
     for case_idx, question in tqdm(enumerate(test_cases), total=len(test_cases)):
         if case_idx < st_idx:
             continue
         if case_idx >= ed_idx:
             break
-        log = func_embedding_inference(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top)
+
+        if mode == "classification":
+            log = classification_inference(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top, cot_models=cot_models)
+            log['answer'] = answers[case_idx]
+        else:
+            raise NotImplementedError(f"Mode {mode} not implemented")
 
         if local_rank == 0:
             try:
@@ -163,8 +233,8 @@ Answer: """,
             output_dir = f"outputs/{dataset}"
             os.makedirs(output_dir, exist_ok=True)
 
-            with open(f"{output_dir}/inference-{size}-{func_model_name}-{mode}-{dataset}-bias_{logits_bias}{suffix}.jsonl", "a") as f:
-                f.write(json.dumps(log) + "\n")
+            with open(f"{output_dir}/inference-{size}-{func_model_name}-{mode}-{dataset}-{subset_id}-bias_{logits_bias}{suffix}.jsonl", "a", encoding='utf-8') as f:
+                f.write(json.dumps(log, ensure_ascii=False) + "\n")
 
 
 if __name__ == "__main__":

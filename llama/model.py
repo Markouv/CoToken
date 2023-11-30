@@ -445,6 +445,7 @@ class FunctionLM(nn.Module):
             t = t[: len(prompt_tokens[i]) + max_gen_len]
             # cut to eos tok if any
             try:
+                cur_pos = t.index(self.tokenizer.eos_id) - 1
                 t = t[: t.index(self.tokenizer.eos_id)]
             except ValueError:
                 pass

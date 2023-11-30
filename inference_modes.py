@@ -1,6 +1,76 @@
 import re
 from funchub.math import *
 
+def classification_inference(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top=5, cot_models=dict(), choices = ["A", "B", "C", "D"]):
+    cur_generation = ""
+    cur_generation_with_func = ""
+    logs = []
+    funcmodel.inference_mode = "func_embedding"
+    func_map = list(funcmodel.func_dict.keys())
+
+    results = []
+    func_calls = []
+
+    prompt = templates["general"].replace("[QUESTION]", question) + cur_generation
+    results = funcmodel.generate([prompt], max_gen_len=max_gen_len, temperature=temperature, top_p=top_p, return_top=return_top, stop_token=[funcmodel.tokenizer.eos_id])
+    if return_top > 0:
+        results, token_log = results
+        logs.append(token_log)
+    cur_generation = results[0].replace(templates["general"].replace("[QUESTION]", question), "")
+
+    for op in func_map:
+        print("cur_generation: \"", cur_generation, "\"\n\nop: \"", op, "\"\n\n")
+        if cur_generation.endswith(op+"("):
+            cur_generation_with_func = cur_generation
+            print("cur_generation_with_func: \"", cur_generation_with_func, "\"\n\n")
+            prompt = templates[op].replace("[QUESTION]", question) + cur_generation_with_func
+            prompt = prompt.split(op+"(")[0]
+            len_prompt = len(prompt)
+            if cot_models[op] == "baseline":
+                funcmodel.inference_mode = "baseline"
+                print("func prompt: \n", prompt, "\n\n")
+                results = funcmodel.generate([prompt], max_gen_len=max_gen_len, temperature=temperature, top_p=top_p, return_top=return_top, stop_token=[funcmodel.tokenizer.eos_id])
+                funcmodel.inference_mode = "func_embedding"
+                if return_top > 0:
+                    results, token_log = results
+                    logs.append(token_log)
+            else:
+                results = cot_models[op]([prompt])
+
+            generated = results[0][len_prompt:]
+            cur_generation = cur_generation.split(op+"(")[0] + generated
+            print("cur_generation: \"", cur_generation, "\"\n\n")
+            
+            func_calls.append(op)
+            break
+
+    funcmodel.inference_mode = "baseline"
+    prompt = templates["summary"].replace("[QUESTION]", question).replace("[THOUGHTS]", cur_generation)
+    len_prompt = len(prompt)
+    print("final prompt: \n", prompt, "\n\n")
+    choice_tokens = [funcmodel.tokenizer.encode(c, bos=False, eos=False) for c in choices]
+    choice_tokens = sum(choice_tokens, [])
+    print("choice_tokens: ", choice_tokens, "\n\n")
+    disable_token = [x for x in range(funcmodel.model.vocab_size) if x not in choice_tokens]
+    results = funcmodel.generate([prompt], max_gen_len=1, temperature=temperature, top_p=top_p, return_top=return_top, disable_token=disable_token)
+    funcmodel.inference_mode = "func_embedding"
+    if return_top > 0:
+        results, token_log = results
+        logs.append(token_log)
+    generated = results[0][len_prompt:]
+    cur_generation = cur_generation + generated
+        
+    log = {
+        "case_idx": case_idx,
+        "question": question,
+        "func_calls": func_calls,
+        "generation": cur_generation.replace("\n", "\\n").strip(),
+        "status": "success"
+    }
+
+    return log
+
+
 def func_embedding_inference(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top=5):
     cur_generation = ""
     cur_generation_with_func = ""
