@@ -169,12 +169,13 @@ def classification_inference_judge(templates, case_idx, question, funcmodel, tem
                 choice_tokens = [funcmodel.tokenizer.encode(c, bos=False, eos=False) for c in judge_choices]
                 choice_tokens = sum(choice_tokens, [])
                 disable_token = [x for x in range(funcmodel.model.vocab_size) if x not in choice_tokens]
-                results = funcmodel.generate([prompt], max_gen_len=1, temperature=temperature, top_p=top_p, return_top=return_top, stop_token=disable_token)
+                results = funcmodel.generate([prompt], max_gen_len=1, temperature=temperature, top_p=top_p, return_top=return_top, disable_token=disable_token)
                 funcmodel.inference_mode = "func_embedding"
                 if return_top > 0:
                     results, token_log = results
                     logs.append(token_log)
                 generated = results[0][len_prompt:]
+                print("\n\njudge generated: ", generated, "\n\n")
                 if generated == "F":
                     rev_times += 1
                     cur_generation = cur_generation.split(op+"(")[0] + ((op + "-" + str(rev_times) + "(") if op[-2] != '-' else (op[:-1] + str(rev_times) + "("))

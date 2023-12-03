@@ -9,7 +9,7 @@ GPU_LIST_1=(4)
 GPU_LIST_2=(5)
 BASE_PORT=58765
 
-for i in {0..66..1}
+for i in {2..66..1}
 do
 
 for j in {0..0}
