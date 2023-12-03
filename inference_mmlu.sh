@@ -25,7 +25,7 @@ master_port=$((BASE_PORT+$i+$j))
 CUDA_VISIBLE_DEVICES=${GPU_LIST_1[$j]},${GPU_LIST_2[$j]} \
 python -m torch.distributed.run --nproc_per_node 1 --master_port $master_port \
 inference_llama_pt.py --ckpt_dir /139-4t/private/radoth/downloaded_models/Llama-2-7b-chat --tokenizer_path /139-4t/private/radoth/downloaded_models/Llama-2-7b-chat/tokenizer.model \
---mode classification \
+--mode classification_with_judge \
 --dataset mmlu --subset_id $(($i+$j)) --func_load_path checkpoints_1125/2023-11-25-epoch_10/checkpoint50000.pth --logits_bias 10.0 &
 
 echo "CUDA_VISIBLE_DEVICES=${GPU_LIST_1[$j]},${GPU_LIST_2[$j]} $(($i+$j)) &"

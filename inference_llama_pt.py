@@ -16,7 +16,7 @@ from fairscale.nn.model_parallel.initialize import initialize_model_parallel
 from tqdm import tqdm
 from llama import ModelArgs, Transformer, Tokenizer, FunctionLM
 import datasets
-from inference_modes import classification_inference
+from inference_modes import classification_inference, classification_inference_judge
 from funchub.math import *
 from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM
 
@@ -126,10 +126,12 @@ def load(ckpt_dir: str, tokenizer_path: str, local_rank: int, world_size: int, f
 def load_cot_models(cot_dict, local_rank, cuda_st_idx = 1, temperature=0, top_p=0.95, max_gen_len=MAX_GEN_LEN, ):
     cot_models = {}
     for cot_name, cot_info in cot_dict.items():
-        torch.cuda.set_device(cuda_st_idx)
         if cot_info["type"] == "baseline":
             cot_models[cot_name] = cot_info["path"]
+        elif cot_info["type"] == "url":
+            cot_models[cot_name] = cot_info["path"] + "<url>"
         elif cot_info["type"] == "chatglm2":
+            torch.cuda.set_device(cuda_st_idx)
             tokenizer_chatglm2 = AutoTokenizer.from_pretrained(cot_info["path"], trust_remote_code=True)
             model_chatglm2 = AutoModel.from_pretrained(cot_info["path"], trust_remote_code=True).bfloat16().cuda()
             model_chatglm2 = model_chatglm2.eval()
@@ -150,7 +152,8 @@ def load_cot_models(cot_dict, local_rank, cuda_st_idx = 1, temperature=0, top_p=
             cot_models[cot_name] = generate_chatglm2
         else:
             raise NotImplementedError()
-        if cot_info["path"] != "baseline":
+        if cot_info["path"] != "baseline" and cot_info["type"] != "url":
+            print(cuda_st_idx)
             cuda_st_idx += 1
     torch.cuda.set_device(local_rank)
     return cot_models
@@ -175,9 +178,16 @@ Answer: """,
         "summary": """Question: [QUESTION]\n
 Thoughts: [THOUGHTS]\n
 Answer: """,
-        "<en-CoT>": """Question: [QUESTION]\n Please think step by step and give the answer.\n
+        "judge": """Question: [QUESTION_TEXT]\n\nAnswer: [ANSWER_TEXT]\n\nBased on the question, please judge the given answer's correctness. If the answer is correct, please write 'T', otherwise, please write 'F'.\n\nJudgement (T/F): """,
+        "<en-CoT>": """Question: [QUESTION]\nPlease think step by step and give the answer.\n
 Answer: """, 
-        "<zh-CoT>": """[Round 1]\n\n问：[QUESTION]\n请一步步思考并给出答案。\n\n答："""
+        "<zh-CoT>": """[Round 1]\n\n问：[QUESTION]\n请一步步思考并给出答案。\n\n答：""",
+        "<en-CoT>-1": """Question: [QUESTION]\nPlease think step by step and give the answer.\n
+Please write down your answer in the format (A), (B), (C), or (D) at the end of your response.\n
+Answer: """,
+        "<zh-CoT>-1": """问: [QUESTION]\n请一步步思考并给出答案。\n
+请将答案用以下格式 (A), (B), (C), (D) 写在回复的最后。\n
+Answer: """
     }
 
     test_cases = []
@@ -198,7 +208,7 @@ Answer: """,
     # test_cases = test_cases[:1]
 
     max_gen_len = MAX_GEN_LEN
-    func_dict = json.load(open("data/CoToken/CoT_dict.json"))
+    func_dict = json.load(open("./CoT_dict_old.json"))
 
 
     funcmodel = load(ckpt_dir, tokenizer_path, local_rank, world_size, func_load_path=func_load_path, func_dict=func_dict)
@@ -207,7 +217,9 @@ Answer: """,
 
     cot_dict = {
         "<en-CoT>": {"path": "baseline", "type": "baseline"},
-        "<zh-CoT>": {"path": '/139-4t/share/evaluation/models/hf-chatglm2-6b', "type": "chatglm2"}
+        "<zh-CoT>": {"path": '/139-4t/share/evaluation/models/hf-chatglm2-6b', "type": "chatglm2"},
+        "<en-CoT>-1": {"path": "gpt-3.5-turbo-1106", "type": "url"},
+        "<zh-CoT>-1": {"path": "gpt-3.5-turbo-1106", "type": "url"},
     }
     if local_rank == 0:
         cot_models = load_cot_models(cot_dict, local_rank, world_size, temperature=temperature, top_p=top_p, max_gen_len=max_gen_len)
@@ -221,6 +233,9 @@ Answer: """,
         if mode == "classification":
             log = classification_inference(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top, cot_models=cot_models)
             log['answer'] = answers[case_idx]
+        elif mode == "classification_with_judge":
+            log = classification_inference_judge(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top, cot_models=cot_models, question_text=texts[case_idx])
+            log['answer'] = answers[case_idx]
         else:
             raise NotImplementedError(f"Mode {mode} not implemented")
 
@@ -230,7 +245,7 @@ Answer: """,
             except:
                 func_model_name = func_load_path
 
-            output_dir = f"outputs/{dataset}"
+            output_dir = f"outputs/{dataset}-judge"
             os.makedirs(output_dir, exist_ok=True)
 
             with open(f"{output_dir}/inference-{size}-{func_model_name}-{mode}-{dataset}-{subset_id}-bias_{logits_bias}{suffix}.jsonl", "a", encoding='utf-8') as f:

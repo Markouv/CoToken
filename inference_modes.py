@@ -1,4 +1,9 @@
 import re
+import backoff
+import json, requests
+from json import JSONDecodeError
+from requests import ConnectTimeout, ConnectionError, ReadTimeout
+from requests.auth import HTTPBasicAuth
 from funchub.math import *
 
 def classification_inference(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top=5, cot_models=dict(), choices = ["A", "B", "C", "D"]):
@@ -50,7 +55,6 @@ def classification_inference(templates, case_idx, question, funcmodel, temperatu
     print("final prompt: \n", prompt, "\n\n")
     choice_tokens = [funcmodel.tokenizer.encode(c, bos=False, eos=False) for c in choices]
     choice_tokens = sum(choice_tokens, [])
-    print("choice_tokens: ", choice_tokens, "\n\n")
     disable_token = [x for x in range(funcmodel.model.vocab_size) if x not in choice_tokens]
     results = funcmodel.generate([prompt], max_gen_len=1, temperature=temperature, top_p=top_p, return_top=return_top, disable_token=disable_token)
     funcmodel.inference_mode = "func_embedding"
@@ -66,6 +70,144 @@ def classification_inference(templates, case_idx, question, funcmodel, temperatu
         "func_calls": func_calls,
         "generation": cur_generation.replace("\n", "\\n").strip(),
         "status": "success"
+    }
+
+    return log
+
+RETRIES=25
+MAX_TOKENS = 512
+BETA_URL = "http://43.163.219.59:8001/beta"
+@backoff.on_exception(backoff.expo, (TypeError, KeyError, JSONDecodeError, ReadTimeout, ConnectionError, ConnectTimeout), max_tries=RETRIES)
+def generate_answer_single_turn(context, model, temperature=0):
+    """
+    context: str
+    """
+    # print("question context: ")
+    # print(context)
+    data = {
+        "model": model,
+        "messages": [{"role": "user", "content": context}],
+        "max_tokens": MAX_TOKENS,
+        "temperature": temperature,
+    }
+    data = json.dumps(data)
+    completion = requests.post(url=BETA_URL, data=data, auth=HTTPBasicAuth(username="thumt",password="Thumt@2023"), timeout=300).text
+    completion = json.loads(completion)
+    # print(completion)
+    # print()
+
+    return completion["choices"][0]["message"]["content"], completion["usage"]["prompt_tokens"], completion["usage"]["completion_tokens"]
+
+
+MODELS_LAYERS = 1
+def classification_inference_judge(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top=5, cot_models=dict(), choices = ["A", "B", "C", "D"], question_text=None):
+    if question_text is None:
+        question_text = question
+    
+    url_prompt_tokens, url_completion_tokens = 0, 0
+    cur_generation = ""
+    cur_generation_with_func = ""
+    logs = []
+    funcmodel.inference_mode = "func_embedding"
+    func_map = list(funcmodel.func_dict.keys())
+    func_map += [f"{func}-{i}" for func in func_map for i in range(1, MODELS_LAYERS+1)]
+
+    results = []
+    func_calls = []
+
+    prompt = templates["general"].replace("[QUESTION]", question) + cur_generation
+    results = funcmodel.generate([prompt], max_gen_len=max_gen_len, temperature=temperature, top_p=top_p, return_top=return_top, stop_token=[funcmodel.tokenizer.eos_id])
+    if return_top > 0:
+        results, token_log = results
+        logs.append(token_log)
+    cur_generation = results[0].replace(templates["general"].replace("[QUESTION]", question), "")
+
+    rev_times = 0
+    end_flag = False
+    while True:
+        for op in func_map:
+            print("cur_generation: \"", cur_generation, "\"\n\nop: \"", op, "\"\n\n")
+            if cur_generation.endswith(op+"("):
+                cur_generation_with_func = cur_generation
+                print("cur_generation_with_func: \"", cur_generation_with_func, "\"\n\n")
+                prompt = templates[op].replace("[QUESTION]", question) + cur_generation_with_func
+                prompt = prompt.split(op+"(")[0]
+                len_prompt = len(prompt)
+                if cot_models[op] == "baseline":
+                    funcmodel.inference_mode = "baseline"
+                    print("func prompt: \n", prompt, "\n\n")
+                    results = funcmodel.generate([prompt], max_gen_len=max_gen_len, temperature=temperature, top_p=top_p, return_top=return_top, stop_token=[funcmodel.tokenizer.eos_id])
+                    funcmodel.inference_mode = "func_embedding"
+                    if return_top > 0:
+                        results, token_log = results
+                        logs.append(token_log)
+                elif isinstance(cot_models[op], str) and cot_models[op].endswith("<url>"):
+                    result = generate_answer_single_turn(prompt, cot_models[op].split("<url>")[0], temperature=temperature)
+                    url_prompt_tokens += result[1]
+                    url_completion_tokens += result[2]
+                    results = [prompt + result[0]]
+                else:
+                    results = cot_models[op]([prompt])
+
+                generated = results[0][len_prompt:]
+                cur_generation_with_func = cur_generation.split(op+"(")[0] + generated
+                print("cur_generation: \"", cur_generation_with_func, "\"\n\n")
+                
+                func_calls.append(op)
+                if op.endswith("-"+str(MODELS_LAYERS)):
+                    cur_generation = cur_generation_with_func
+                    end_flag = True
+                    break
+                # break
+
+                # judge
+                prompt = templates["judge"].replace("[QUESTION_TEXT]", question_text).replace("[ANSWER_TEXT]", cur_generation_with_func)
+                len_prompt = len(prompt)
+                funcmodel.inference_mode = "baseline"
+                print("func prompt: \n", prompt, "\n\n")
+                judge_choices = ["T", "F"]
+                choice_tokens = [funcmodel.tokenizer.encode(c, bos=False, eos=False) for c in judge_choices]
+                choice_tokens = sum(choice_tokens, [])
+                disable_token = [x for x in range(funcmodel.model.vocab_size) if x not in choice_tokens]
+                results = funcmodel.generate([prompt], max_gen_len=1, temperature=temperature, top_p=top_p, return_top=return_top, stop_token=disable_token)
+                funcmodel.inference_mode = "func_embedding"
+                if return_top > 0:
+                    results, token_log = results
+                    logs.append(token_log)
+                generated = results[0][len_prompt:]
+                if generated == "F":
+                    rev_times += 1
+                    cur_generation = cur_generation.split(op+"(")[0] + ((op + "-" + str(rev_times) + "(") if op[-2] != '-' else (op[:-1] + str(rev_times) + "("))
+                else:
+                    cur_generation = cur_generation_with_func
+                    end_flag = True
+                break
+        if end_flag:
+            break
+
+    funcmodel.inference_mode = "baseline"
+    prompt = templates["summary"].replace("[QUESTION]", question).replace("[THOUGHTS]", cur_generation)
+    len_prompt = len(prompt)
+    print("final prompt: \n", prompt, "\n\n")
+    choice_tokens = [funcmodel.tokenizer.encode(c, bos=False, eos=False) for c in choices]
+    choice_tokens = sum(choice_tokens, [])
+    disable_token = [x for x in range(funcmodel.model.vocab_size) if x not in choice_tokens]
+    results = funcmodel.generate([prompt], max_gen_len=1, temperature=temperature, top_p=top_p, return_top=return_top, disable_token=disable_token)
+    funcmodel.inference_mode = "func_embedding"
+    if return_top > 0:
+        results, token_log = results
+        logs.append(token_log)
+    generated = results[0][len_prompt:]
+    cur_generation = cur_generation + generated
+        
+    log = {
+        "case_idx": case_idx,
+        "question": question,
+        "func_calls": func_calls,
+        "generation": cur_generation.replace("\n", "\\n").strip(),
+        "status": "success",
+        "url_prompt_tokens": url_prompt_tokens,
+        "url_completion_tokens": url_completion_tokens,
     }
 
     return log
