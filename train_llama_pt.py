@@ -179,7 +179,7 @@ def main(ckpt_dir: str, tokenizer_path: str, input_file: str = None, lr: float =
             
             if (case_idx + 1) % 500 == 0:
                 # save the parameters of func_embed every epoch
-                save_dir = f"checkpoints_1125/{log_prefix}-epoch_{epoch+1}/"
+                save_dir = f"checkpoints_1202/{log_prefix}-epoch_{epoch+1}/"
                 os.makedirs(save_dir, exist_ok=True)
                 torch.save(funcmodel.func_embed.state_dict(), f"{save_dir}/checkpoint{case_idx+1}.pth")
                 results = defaultdict(list)

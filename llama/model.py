@@ -309,6 +309,7 @@ class FunctionLM(nn.Module):
                 labels[s] = self.func_dict[op] + 32000
                 labels[s+1: t-1] = -100
             
+            # print(f"labels:{labels}")
             # labels = labels[1:]
             if only_functoken:
                 labels[labels < 32000] = -100
