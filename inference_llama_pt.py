@@ -185,9 +185,12 @@ Answer: """,
         "<en-CoT>-1": """Question: [QUESTION]\nPlease think step by step and give the answer.\n
 Please write down your answer in the format (A), (B), (C), or (D) at the end of your response.\n
 Answer: """,
-        "<zh-CoT>-1": """问: [QUESTION]\n请一步步思考并给出答案。\n
-请将答案用以下格式 (A), (B), (C), (D) 写在回复的最后。\n
+        "<zh-CoT>-1": """Question: [QUESTION]\nPlease think step by step and give the answer.\n
+Please write down your answer in the format (A), (B), (C), or (D) at the end of your response.\n
 Answer: """
+#         "<zh-CoT>-1": """问: [QUESTION]\n请一步步思考并给出答案。\n
+# 请将答案用以下格式 (A), (B), (C), (D) 写在回复的最后。\n
+# Answer: """
     }
 
     test_cases = []
@@ -198,7 +201,7 @@ Answer: """
         answers = ds["answer"]
     elif dataset == "cmmlu":
         ds = datasets.load_dataset("haonan-li/cmmlu", CMMLU_SUBJECTS[subset_id], split="test")
-        texts, options = ds["Question"], zip(ds["A"], ds["B"], ds["C"], ds["D"])
+        texts, options = ds["Question"], list(zip(ds["A"], ds["B"], ds["C"], ds["D"]))
         test_cases = ["以下是关于{}的单项选择题，请直接给出正确答案的选项。\n\n{}\nA. {}\nB. {}\nC. {}\nD. {}".format(CMMLU_SUBJECTS[subset_id], text, *option) for text, option in zip(texts, options)]
         answers = ds["Answer"]
     else:
@@ -234,7 +237,7 @@ Answer: """
             log = classification_inference(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top, cot_models=cot_models)
             log['answer'] = answers[case_idx]
         elif mode == "classification_with_judge":
-            log = classification_inference_judge(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top, cot_models=cot_models, question_text=texts[case_idx])
+            log = classification_inference_judge(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top, cot_models=cot_models, question_text=texts[case_idx], option_texts=options[case_idx])
             log['answer'] = answers[case_idx]
         else:
             raise NotImplementedError(f"Mode {mode} not implemented")

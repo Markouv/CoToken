@@ -100,7 +100,7 @@ def generate_answer_single_turn(context, model, temperature=0):
 
 
 MODELS_LAYERS = 1
-def classification_inference_judge(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top=5, cot_models=dict(), choices = ["A", "B", "C", "D"], question_text=None):
+def classification_inference_judge(templates, case_idx, question, funcmodel, temperature, top_p, max_gen_len, return_top=5, cot_models=dict(), choices = ["A", "B", "C", "D"], question_text=None, option_texts=None):
     if question_text is None:
         question_text = question
     
@@ -124,10 +124,15 @@ def classification_inference_judge(templates, case_idx, question, funcmodel, tem
 
     rev_times = 0
     end_flag = False
+    # final_gen = None
+    # hyp_choice = None
+    calling_history = []
     while True:
+        matched = False
         for op in func_map:
             print("cur_generation: \"", cur_generation, "\"\n\nop: \"", op, "\"\n\n")
             if cur_generation.endswith(op+"("):
+                matched = True
                 cur_generation_with_func = cur_generation
                 print("cur_generation_with_func: \"", cur_generation_with_func, "\"\n\n")
                 prompt = templates[op].replace("[QUESTION]", question) + cur_generation_with_func
@@ -152,6 +157,7 @@ def classification_inference_judge(templates, case_idx, question, funcmodel, tem
                 generated = results[0][len_prompt:]
                 cur_generation_with_func = cur_generation.split(op+"(")[0] + generated
                 print("cur_generation: \"", cur_generation_with_func, "\"\n\n")
+                calling_history.append(cur_generation_with_func)
                 
                 func_calls.append(op)
                 if op.endswith("-"+str(MODELS_LAYERS)):
@@ -160,11 +166,28 @@ def classification_inference_judge(templates, case_idx, question, funcmodel, tem
                     break
                 # break
 
+                # funcmodel.inference_mode = "baseline"
+                # prompt = templates["summary"].replace("[QUESTION]", question).replace("[THOUGHTS]", cur_generation_with_func)
+                # len_prompt = len(prompt)
+                # print("final prompt: \n", prompt, "\n\n")
+                # choice_tokens = [funcmodel.tokenizer.encode(c, bos=False, eos=False) for c in choices]
+                # choice_tokens = sum(choice_tokens, [])
+                # disable_token = [x for x in range(funcmodel.model.vocab_size) if x not in choice_tokens]
+                # results = funcmodel.generate([prompt], max_gen_len=1, temperature=temperature, top_p=top_p, return_top=return_top, disable_token=disable_token)
+                # funcmodel.inference_mode = "func_embedding"
+                # if return_top > 0:
+                #     results, token_log = results
+                #     logs.append(token_log)
+                # generated = results[0][len_prompt:]
+                # print("final choice: ", generated, "\n\n")
+
                 # judge
+                # hyp_choice = generated.strip()
+                # prompt = templates["judge"].replace("[QUESTION_TEXT]", question_text).replace("[ANSWER_TEXT]", option_texts[choices.index(hyp_choice)])
                 prompt = templates["judge"].replace("[QUESTION_TEXT]", question_text).replace("[ANSWER_TEXT]", cur_generation_with_func)
                 len_prompt = len(prompt)
                 funcmodel.inference_mode = "baseline"
-                print("func prompt: \n", prompt, "\n\n")
+                print("judge prompt: \n", prompt, "\n\n")
                 judge_choices = ["T", "F"]
                 choice_tokens = [funcmodel.tokenizer.encode(c, bos=False, eos=False) for c in judge_choices]
                 choice_tokens = sum(choice_tokens, [])
@@ -176,16 +199,24 @@ def classification_inference_judge(templates, case_idx, question, funcmodel, tem
                     logs.append(token_log)
                 generated = results[0][len_prompt:]
                 print("\n\njudge generated: ", generated, "\n\n")
-                if generated == "F":
+                if generated.strip() == "F":
                     rev_times += 1
                     cur_generation = cur_generation.split(op+"(")[0] + ((op + "-" + str(rev_times) + "(") if op[-2] != '-' else (op[:-1] + str(rev_times) + "("))
                 else:
+                    # final_gen = cur_generation_with_func + hyp_choice
                     cur_generation = cur_generation_with_func
                     end_flag = True
                 break
+        
+        if not matched:
+            break
+        
         if end_flag:
             break
 
+    # if final_gen is not None:
+    #     cur_generation = final_gen
+    # else:
     funcmodel.inference_mode = "baseline"
     prompt = templates["summary"].replace("[QUESTION]", question).replace("[THOUGHTS]", cur_generation)
     len_prompt = len(prompt)
@@ -205,6 +236,7 @@ def classification_inference_judge(templates, case_idx, question, funcmodel, tem
         "case_idx": case_idx,
         "question": question,
         "func_calls": func_calls,
+        "calling_history": [x.replace("\n", "\\n").strip() for x in calling_history],
         "generation": cur_generation.replace("\n", "\\n").strip(),
         "status": "success",
         "url_prompt_tokens": url_prompt_tokens,
