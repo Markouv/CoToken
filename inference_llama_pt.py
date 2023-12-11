@@ -130,26 +130,47 @@ def load_cot_models(cot_dict, local_rank, cuda_st_idx = 1, temperature=0, top_p=
             cot_models[cot_name] = cot_info["path"]
         elif cot_info["type"] == "url":
             cot_models[cot_name] = cot_info["path"] + "<url>"
-        elif cot_info["type"] == "chatglm2":
+        # elif cot_info["type"] == "chatglm2":
+        #     torch.cuda.set_device(cuda_st_idx)
+        #     tokenizer_chatglm2 = AutoTokenizer.from_pretrained(cot_info["path"], trust_remote_code=True)
+        #     model_chatglm2 = AutoModel.from_pretrained(cot_info["path"], trust_remote_code=True).bfloat16().cuda()
+        #     model_chatglm2 = model_chatglm2.eval()
+        #     model_cuda_idx = cuda_st_idx
+        #     def generate_chatglm2(prompts):
+        #         print(model_cuda_idx)
+        #         torch.cuda.set_device(model_cuda_idx)
+        #         inputs = tokenizer_chatglm2(prompts, return_tensors="pt", padding=True, truncation=True, max_length=max_gen_len).to("cuda")
+        #         outputs = model_chatglm2.generate(**inputs, max_new_tokens=max_gen_len, do_sample=False if temperature == 0 else True, top_p=top_p, temperature=temperature)
+        #         gens = []
+        #         for idx in range(len(outputs)):
+        #             output = outputs.tolist()[idx]
+        #             response = tokenizer_chatglm2.decode(output)
+        #             gens.append(response)
+        #         torch.cuda.set_device(local_rank)
+        #         return gens
+
+        #     cot_models[cot_name] = generate_chatglm2
+        
+        elif cot_info["type"] == "01-ai":
             torch.cuda.set_device(cuda_st_idx)
-            tokenizer_chatglm2 = AutoTokenizer.from_pretrained(cot_info["path"], trust_remote_code=True)
-            model_chatglm2 = AutoModel.from_pretrained(cot_info["path"], trust_remote_code=True).bfloat16().cuda()
-            model_chatglm2 = model_chatglm2.eval()
+            tokenizer_Yi = AutoTokenizer.from_pretrained(cot_info["path"], trust_remote_code=True)
+            model_Yi = AutoModelForCausalLM.from_pretrained(cot_info["path"], trust_remote_code=True).bfloat16().cuda()
+            model_Yi = model_Yi.eval()
             model_cuda_idx = cuda_st_idx
-            def generate_chatglm2(prompts):
+            def generate_Yi(prompts):
                 print(model_cuda_idx)
                 torch.cuda.set_device(model_cuda_idx)
-                inputs = tokenizer_chatglm2(prompts, return_tensors="pt", padding=True, truncation=True, max_length=max_gen_len).to("cuda")
-                outputs = model_chatglm2.generate(**inputs, max_new_tokens=max_gen_len, do_sample=False if temperature == 0 else True, top_p=top_p, temperature=temperature)
+                inputs = tokenizer_Yi(prompts, return_tensors="pt", padding=True, truncation=True, max_length=max_gen_len).to("cuda")
+                outputs = model_Yi.generate(**inputs, max_new_tokens=max_gen_len, do_sample=False if temperature == 0 else True, top_p=top_p, temperature=temperature)
                 gens = []
                 for idx in range(len(outputs)):
                     output = outputs.tolist()[idx]
-                    response = tokenizer_chatglm2.decode(output)
+                    response = tokenizer_Yi.decode(output)
                     gens.append(response)
                 torch.cuda.set_device(local_rank)
                 return gens
 
-            cot_models[cot_name] = generate_chatglm2
+            cot_models[cot_name] = generate_Yi
         else:
             raise NotImplementedError()
         if cot_info["path"] != "baseline" and cot_info["type"] != "url":
@@ -195,12 +216,14 @@ Answer: """
 
     test_cases = []
     if dataset == "mmlu":
-        ds = datasets.load_dataset("cais/mmlu", MMLU_SUBJECTS[subset_id], split="test")
+        ds = datasets.load_from_disk(os.path.join('/139-4t/share/evaluation/datasets/lmeval/cais_mmlu/', MMLU_SUBJECTS[subset_id]))
+        ds = ds['test']
         texts, options = ds["question"], ds["choices"]
         test_cases = ["{}\nA. {}\nB. {}\nC. {}\nD. {}".format(text, *option) for text, option in zip(texts, options)]
         answers = ds["answer"]
     elif dataset == "cmmlu":
-        ds = datasets.load_dataset("haonan-li/cmmlu", CMMLU_SUBJECTS[subset_id], split="test")
+        ds = datasets.load_from_disk(os.path.join('/139-4t/private/radoth/evaluation/cmmlu/', CMMLU_SUBJECTS[subset_id]))
+        ds = ds['test']
         texts, options = ds["Question"], list(zip(ds["A"], ds["B"], ds["C"], ds["D"]))
         test_cases = ["以下是关于{}的单项选择题，请直接给出正确答案的选项。\n\n{}\nA. {}\nB. {}\nC. {}\nD. {}".format(CMMLU_SUBJECTS[subset_id], text, *option) for text, option in zip(texts, options)]
         answers = ds["Answer"]
@@ -220,7 +243,8 @@ Answer: """
 
     cot_dict = {
         "<en-CoT>": {"path": "baseline", "type": "baseline"},
-        "<zh-CoT>": {"path": '/139-4t/share/evaluation/models/hf-chatglm2-6b', "type": "chatglm2"},
+        # "<zh-CoT>": {"path": '/139-4t/share/evaluation/models/hf-chatglm2-6b', "type": "chatglm2"},
+        "<zh-CoT>": {"path": '/139-4t/private/radoth/downloaded_models/Yi-6B-chat', "type": "01-ai"},
         "<en-CoT>-1": {"path": "gpt-3.5-turbo-1106", "type": "url"},
         "<zh-CoT>-1": {"path": "gpt-3.5-turbo-1106", "type": "url"},
     }
