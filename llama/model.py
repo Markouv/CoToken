@@ -70,9 +70,14 @@ def apply_rotary_emb(
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))
     xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))
-    freqs_cis = reshape_for_broadcast(freqs_cis, xq_)
-    xq_out = torch.view_as_real(xq_ * freqs_cis).flatten(3)
-    xk_out = torch.view_as_real(xk_ * freqs_cis).flatten(3)
+    print(f"xk_:{xk_.shape}")
+    freqs_cis_q = reshape_for_broadcast(freqs_cis, xq_)
+    freqs_cis_k = reshape_for_broadcast(freqs_cis, xk_)
+
+    xq_out = torch.view_as_real(xq_ * freqs_cis_q).flatten(3)
+    print(f"xq_out:{xq_out.shape}")
+    xk_out = torch.view_as_real(xk_ * freqs_cis_k).flatten(3)
+    print(f"xk_out:{xk_out.shape}")    
     return xq_out.type_as(xq), xk_out.type_as(xk)
 
 
@@ -92,14 +97,14 @@ class Attention(nn.Module):
         )
         self.wk = ColumnParallelLinear(
             args.dim,
-            args.n_heads * self.head_dim,
+            args.n_heads * self.head_dim // 8,
             bias=False,
             gather_output=False,
             init_method=lambda x: x,
         )
         self.wv = ColumnParallelLinear(
             args.dim,
-            args.n_heads * self.head_dim,
+            args.n_heads * self.head_dim // 8,
             bias=False,
             gather_output=False,
             init_method=lambda x: x,
@@ -122,13 +127,13 @@ class Attention(nn.Module):
     def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor, mask: Optional[torch.Tensor]):
         bsz, seqlen, _ = x.shape
         xq, xk, xv = self.wq(x), self.wk(x), self.wv(x)
-
+        
         xq = xq.view(bsz, seqlen, self.n_local_heads, self.head_dim)
-        xk = xk.view(bsz, seqlen, self.n_local_heads, self.head_dim)
-        xv = xv.view(bsz, seqlen, self.n_local_heads, self.head_dim)
+        xk = xk.view(bsz, seqlen, self.n_local_heads, self.head_dim // 8)
+        xv = xv.view(bsz, seqlen, self.n_local_heads, self.head_dim // 8)
 
         xq, xk = apply_rotary_emb(xq, xk, freqs_cis=freqs_cis)
-
+        
         self.cache_k = self.cache_k.to(xq)
         self.cache_v = self.cache_v.to(xq)
 
@@ -224,6 +229,7 @@ class Transformer(nn.Module):
 
     # @torch.inference_mode()
     def forward(self, tokens: torch.Tensor, start_pos: int):
+        
         _bsz, seqlen = tokens.shape
         h = self.tok_embeddings(tokens)  # (bsz, partial_seqlen, dim)
         self.freqs_cis = self.freqs_cis.to(h.device)
@@ -233,9 +239,9 @@ class Transformer(nn.Module):
         if seqlen > 1:
             mask = torch.full((1, 1, seqlen, seqlen), float("-inf"), device=tokens.device)
             mask = torch.triu(mask, diagonal=start_pos + 1).type_as(h)
-
         for layer in self.layers:
             h = layer(h, start_pos, freqs_cis, mask)
+
         h = self.norm(h)
         output = self.output(h[:, -1, :])  # only compute last logits
         return output.float(), h
@@ -306,32 +312,39 @@ class FunctionLM(nn.Module):
                 if op not in self.func_dict:
                     op = op[1:-1]
                 
-                labels[s] = self.func_dict[op] + 32000
+                labels[s] = self.func_dict[op] + 64000
                 labels[s+1: t] = -100
             
             # labels = labels[1:]
             if only_functoken:
-                labels[labels < 32000] = -100
+                labels[labels < 64000] = -100
             inputs = raw_input_ids[:-1].expand(1, -1).to("cuda")
             labels = labels[1:].expand(1, -1).to("cuda")
-
+            # print(f"inputs:{inputs}")
+            # print(f"labels:{labels}")
             # attention_mask = torch.zeros(inputs.shape)
+
             last_logits, h = self.model(inputs, 0) # h: (bsz, seqlen, dim)
+            # print(f"last_logits:{last_logits}")
             
             token_logits = self.model.output(h) # (bsz, seqlen, vocab_size)
+            # print(f"token_logits:{token_logits}")
             # print(h.device)
         
         func_logits = self.func_embed(h.float()) # (bsz, seqlen, len(func_list))
+        # print(func_logits)
         
         concat_logits = torch.cat([token_logits, func_logits], dim=-1) # (bsz, seqlen, vocab_size + len(func_list))
+
         loss = F.cross_entropy(concat_logits.view(-1, concat_logits.shape[-1]), labels.view(-1), ignore_index=-100)
+
         # check p, r, f1 for each function
         pred = torch.argmax(concat_logits, dim=-1) # (bsz, seqlen)
         pred = pred.view(-1)
         labels = labels.view(-1)
 
-        label_funcs = [labels == self.func_dict[op] + 32000 for op in self.func_dict.keys()]
-        pred_funcs = [pred == self.func_dict[op] + 32000 for op in self.func_dict.keys()]
+        label_funcs = [labels == self.func_dict[op] + 64000 for op in self.func_dict.keys()]
+        pred_funcs = [pred == self.func_dict[op] + 64000 for op in self.func_dict.keys()]
         label_funcs = torch.stack(label_funcs, dim=0)
         pred_funcs = torch.stack(pred_funcs, dim=0)
         
@@ -431,7 +444,7 @@ class FunctionLM(nn.Module):
             tokens[:, cur_pos] = next_token
             prev_pos = cur_pos
 
-            if next_token[0] >= 32000 or next_token[0] in stop_token_single:
+            if next_token[0] >= 64000 or next_token[0] in stop_token_single:
                 # print("breaking!!")
                 break
 
@@ -449,14 +462,14 @@ class FunctionLM(nn.Module):
                 t = t[: t.index(self.tokenizer.eos_id)]
             except ValueError:
                 pass
-            if t[cur_pos] >= 32000:
+            if t[cur_pos] >= 64000:
                 if no_left_parens:
-                    decoded.append(self.tokenizer.decode(t[:cur_pos]) + self.func_list[t[cur_pos] - 32000])
+                    decoded.append(self.tokenizer.decode(t[:cur_pos]) + self.func_list[t[cur_pos] - 64000])
                 else:
                     if "<" in self.func_list[0]:
-                        decoded.append(self.tokenizer.decode(t[:cur_pos]) + self.func_list[t[cur_pos] - 32000] + "(")
+                        decoded.append(self.tokenizer.decode(t[:cur_pos]) + self.func_list[t[cur_pos] - 64000] + "(")
                     elif "[" in self.func_list[0]:
-                        decoded.append(self.tokenizer.decode(t[:cur_pos]) + self.func_list[t[cur_pos] - 32000] + " <")
+                        decoded.append(self.tokenizer.decode(t[:cur_pos]) + self.func_list[t[cur_pos] - 64000] + " <")
                     else:
                         raise NotImplementedError
             else:

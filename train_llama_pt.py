@@ -37,11 +37,11 @@ def load(ckpt_dir: str, tokenizer_path: str, local_rank: int, world_size: int, f
     ckpt_path = checkpoints[local_rank]
     print("Loading")
     checkpoint = torch.load(ckpt_path, map_location="cpu")
-    
+
     with open(Path(ckpt_dir) / "params.json", "r") as f:
         params = json.loads(f.read())
 
-    model_args: ModelArgs = ModelArgs(max_seq_len=2048, max_batch_size=1, **params)
+    model_args: ModelArgs = ModelArgs(max_seq_len=4096, max_batch_size=1, **params)
     tokenizer = Tokenizer(model_path=tokenizer_path)
     model_args.vocab_size = tokenizer.n_words
     torch.set_default_tensor_type(torch.cuda.HalfTensor)
@@ -49,6 +49,14 @@ def load(ckpt_dir: str, tokenizer_path: str, local_rank: int, world_size: int, f
     model = Transformer(model_args).cuda().half()
     torch.set_default_tensor_type(torch.FloatTensor)
     model.load_state_dict(checkpoint, strict=False)
+    # print(f"checkpoint:{checkpoint}")
+    # print(f"model:{model.state_dict()}")
+    
+    # for key, value in checkpoint.items():
+    #     print(f"{key}:{value.shape}")
+        
+    # for key, value in model.state_dict().items():
+    #     print(f"{key}:{value.shape}")
 
     # model = AutoModel.from_pretrained(ckpt_dir, trust_remote_code=True).bfloat16().cuda()
     # tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
@@ -72,7 +80,6 @@ def main(ckpt_dir: str, tokenizer_path: str, input_file: str = None, lr: float =
     func_dict = json.load(open(func_dict_path, "r"))
 
     local_rank, world_size = setup_model_parallel()
-    print(local_rank, world_size)
     
     if local_rank > 0:
         sys.stdout = open(os.devnull, 'w')
@@ -82,8 +89,9 @@ def main(ckpt_dir: str, tokenizer_path: str, input_file: str = None, lr: float =
         # wandb.init(project="opt", name=save_name)
 
     funcmodel = load(ckpt_dir, tokenizer_path, local_rank, world_size, func_dict=func_dict)
-
     
+    # for param in funcmodel.model.parameters():
+        # print(param)
     if input_file.endswith(".json"):
         with open(input_file, "r") as f:
             prompts = json.load(f)
@@ -107,7 +115,7 @@ def main(ckpt_dir: str, tokenizer_path: str, input_file: str = None, lr: float =
     
     random.shuffle(prompts)
     testset = prompts[-test_len:]
-    trainset = prompts[:50000]
+    trainset = prompts[:2000]
 
     # only update tokens with gradients required
 
@@ -136,6 +144,7 @@ def main(ckpt_dir: str, tokenizer_path: str, input_file: str = None, lr: float =
                     results[i].append(r)
 
                 if (case_idx + 1) % 100 == 0:
+                    print(funcmodel.func_embed.state_dict())
                     print({"epoch": epoch + 1, "step": case_idx + 1})
                     for i in range(len(func_list)+1):
                         if i != len(func_list):
@@ -179,7 +188,7 @@ def main(ckpt_dir: str, tokenizer_path: str, input_file: str = None, lr: float =
             
             if (case_idx + 1) % 500 == 0:
                 # save the parameters of func_embed every epoch
-                save_dir = f"checkpoints_1202/{log_prefix}-epoch_{epoch+1}/"
+                save_dir = f"checkpoints_1214_Yi/{log_prefix}-epoch_{epoch+1}/"
                 os.makedirs(save_dir, exist_ok=True)
                 torch.save(funcmodel.func_embed.state_dict(), f"{save_dir}/checkpoint{case_idx+1}.pth")
                 results = defaultdict(list)
