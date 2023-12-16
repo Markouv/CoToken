@@ -115,7 +115,7 @@ def main(ckpt_dir: str, tokenizer_path: str, input_file: str = None, lr: float =
     
     random.shuffle(prompts)
     testset = prompts[-test_len:]
-    trainset = prompts[:2000]
+    trainset = prompts[:50000]
 
     # only update tokens with gradients required
 

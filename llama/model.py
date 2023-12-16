@@ -25,6 +25,7 @@ class ModelArgs:
     dim: int = 512
     n_layers: int = 8
     n_heads: int = 8
+    n_k_v_heads: int = 4
     vocab_size: int = -1  # defined later by tokenizer
     multiple_of: int = 256  # make SwiGLU hidden layer size multiple of large power of 2
     norm_eps: float = 1e-5
@@ -70,22 +71,32 @@ def apply_rotary_emb(
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))
     xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))
-    print(f"xk_:{xk_.shape}")
-    freqs_cis_q = reshape_for_broadcast(freqs_cis, xq_)
-    freqs_cis_k = reshape_for_broadcast(freqs_cis, xk_)
 
-    xq_out = torch.view_as_real(xq_ * freqs_cis_q).flatten(3)
-    print(f"xq_out:{xq_out.shape}")
-    xk_out = torch.view_as_real(xk_ * freqs_cis_k).flatten(3)
-    print(f"xk_out:{xk_out.shape}")    
+    freqs_cis = reshape_for_broadcast(freqs_cis, xq_)
+
+    xq_out = torch.view_as_real(xq_ * freqs_cis).flatten(3)
+
+    xk_out = torch.view_as_real(xk_ * freqs_cis).flatten(3)
+
     return xq_out.type_as(xq), xk_out.type_as(xk)
 
+def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
+    """
+    This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
+    num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
+    """
+    batch, num_key_value_heads, slen, head_dim = hidden_states.shape
+    if n_rep == 1:
+        return hidden_states
+    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 class Attention(nn.Module):
     def __init__(self, args: ModelArgs):
         super().__init__()
 
         self.n_local_heads = args.n_heads // fs_init.get_model_parallel_world_size()
+        self.n_k_v_local_heads = args.n_k_v_heads // fs_init.get_model_parallel_world_size()
         self.head_dim = args.dim // args.n_heads
 
         self.wq = ColumnParallelLinear(
@@ -97,14 +108,14 @@ class Attention(nn.Module):
         )
         self.wk = ColumnParallelLinear(
             args.dim,
-            args.n_heads * self.head_dim // 8,
+            args.n_k_v_heads * self.head_dim,
             bias=False,
             gather_output=False,
             init_method=lambda x: x,
         )
         self.wv = ColumnParallelLinear(
             args.dim,
-            args.n_heads * self.head_dim // 8,
+            args.n_k_v_heads * self.head_dim,
             bias=False,
             gather_output=False,
             init_method=lambda x: x,
@@ -118,10 +129,10 @@ class Attention(nn.Module):
         )
 
         self.cache_k = torch.zeros(
-            (args.max_batch_size, args.max_seq_len, self.n_local_heads, self.head_dim)
+            (args.max_batch_size, args.max_seq_len, self.n_k_v_local_heads, self.head_dim)
         ).cuda()
         self.cache_v = torch.zeros(
-            (args.max_batch_size, args.max_seq_len, self.n_local_heads, self.head_dim)
+            (args.max_batch_size, args.max_seq_len, self.n_k_v_local_heads, self.head_dim)
         ).cuda()
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor, mask: Optional[torch.Tensor]):
@@ -129,23 +140,25 @@ class Attention(nn.Module):
         xq, xk, xv = self.wq(x), self.wk(x), self.wv(x)
         
         xq = xq.view(bsz, seqlen, self.n_local_heads, self.head_dim)
-        xk = xk.view(bsz, seqlen, self.n_local_heads, self.head_dim // 8)
-        xv = xv.view(bsz, seqlen, self.n_local_heads, self.head_dim // 8)
+        xk = xk.view(bsz, seqlen, self.n_k_v_local_heads, self.head_dim)
+        xv = xv.view(bsz, seqlen, self.n_k_v_local_heads, self.head_dim)
 
         xq, xk = apply_rotary_emb(xq, xk, freqs_cis=freqs_cis)
-        
+
         self.cache_k = self.cache_k.to(xq)
         self.cache_v = self.cache_v.to(xq)
-
+        
         self.cache_k[:bsz, start_pos : start_pos + seqlen] = xk
         self.cache_v[:bsz, start_pos : start_pos + seqlen] = xv
 
         keys = self.cache_k[:bsz, : start_pos + seqlen]
         values = self.cache_v[:bsz, : start_pos + seqlen]
-
+        
         xq = xq.transpose(1, 2)
         keys = keys.transpose(1, 2)
         values = values.transpose(1, 2)
+        keys = repeat_kv(keys, 8)
+        values = repeat_kv(values, 8)
         scores = torch.matmul(xq, keys.transpose(2, 3)) / math.sqrt(self.head_dim)
         if mask is not None:
             scores = scores + mask  # (bs, n_local_heads, slen, cache_len + slen)
@@ -187,6 +200,7 @@ class TransformerBlock(nn.Module):
     def __init__(self, layer_id: int, args: ModelArgs):
         super().__init__()
         self.n_heads = args.n_heads
+        self.n_k_v_heads = args.n_k_v_heads
         self.dim = args.dim
         self.head_dim = args.dim // args.n_heads
         self.attention = Attention(args)
